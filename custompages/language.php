@@ -1,0 +1,74 @@
+<?php
+/* For licensing terms, see /license.txt */
+/**
+ * Definition of language-related functions for cases where th user isn't
+ * logged in yet
+ * @package chamilo.custompages
+ */
+/**
+ * Get the preferred language base on the browser headers
+ */
+function get_preferred_language($available_langs) {
+	$langs = array();
+	foreach (explode(',', $_SERVER['HTTP_ACCEPT_LANGUAGE']) as $httplang) {
+		$rawlang = explode(';q=', $httplang);
+		if (strpos($rawlang[0], '-') !== FALSE) {
+			$rawlang[0] = substr($rawlang[0], 0, strpos($rawlang[0], '-'));
+		}
+		if (count($rawlang) == 1) {
+			$rawlang[1] = 1.0;
+		}
+		$langs[$rawlang[1]] = $rawlang[0];
+	}
+	krsort($langs, SORT_NUMERIC);
+	foreach($langs as $weight => $code) {
+		if (in_array($code, $available_langs)) {
+			return $code;
+		}
+	}
+	return null;
+}
+/**
+ * Get a language variable in a specific language
+ */
+function custompages_get_lang($variable) {
+	return get_lang($variable, null, $_SESSION['user_language_choice']);
+}
+
+$available_langs = array('en', 'fr', 'es', 'gl', 'eu');
+$chamilo_langs = array(
+    null => 'english',
+    'en' => 'english',
+    'fr' => 'french',
+    'nl' => 'dutch',
+    'de' => 'german',
+    'es' => 'spanish',
+    'gl' => 'galician',
+    'eu' => 'basque'
+);
+$lang_match = $chamilo_langs[get_preferred_language($available_langs)];
+// recover previous value ...
+if (isset($_SESSION['user_language_choice']))
+	$lang_match = $_SESSION['user_language_choice'];
+
+// Chamilo parameter, on logout
+if (isset($_REQUEST['language']) && !empty($_REQUEST['language']) && in_array($_REQUEST['language'], $chamilo_langs)) {
+	$lang_match = $_REQUEST['language'];
+}
+// Incoming link parameter
+if (isset($_REQUEST['lang']) && !empty($_REQUEST['lang']) && in_array($_REQUEST['lang'], $available_langs)) {
+	$lang_match = $chamilo_langs[$_REQUEST['lang']];
+}
+
+$detect = api_get_setting('auto_detect_language_custom_pages');
+if ($detect === 'true') {
+    // Auto detect
+    $_user['language'] = $lang_match;
+    $_SESSION['user_language_choice'] = $lang_match;
+} else {
+    // Chamilo default platform.
+    $defaultLanguage = api_get_interface_language();
+    $_user['language'] = $defaultLanguage;
+    $_SESSION['user_language_choice'] = $defaultLanguage;
+}
+
